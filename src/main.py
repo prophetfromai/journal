@@ -4,11 +4,16 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
 from pathlib import Path
+import sys
+import os
 
-from core.deepseek_client import DeepSeekClient
-from knowledge_graph.graph_manager import KnowledgeGraphManager
-from workflows.workflow_manager import WorkflowManager
-from tools.content_processor import ContentProcessor
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.core.deepseek_client import DeepSeekClient
+from src.knowledge_graph.graph_manager import KnowledgeGraphManager
+from src.workflows.workflow_manager import WorkflowManager
+from src.tools.content_processor import ContentProcessor
 
 app = FastAPI(title="Autonomous AI System")
 

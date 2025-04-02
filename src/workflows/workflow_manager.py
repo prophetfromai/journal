@@ -5,8 +5,8 @@ import json
 import asyncio
 from datetime import datetime
 import git
-from ..core.deepseek_client import DeepSeekClient
-from ..knowledge_graph.graph_manager import KnowledgeGraphManager
+from src.core.deepseek_client import DeepSeekClient
+from src.knowledge_graph.graph_manager import KnowledgeGraphManager
 
 class WorkflowManager:
     def __init__(

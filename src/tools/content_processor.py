@@ -8,8 +8,8 @@ import requests
 from bs4 import BeautifulSoup
 from pytube import YouTube
 import os
-from ..core.deepseek_client import DeepSeekClient
-from ..knowledge_graph.graph_manager import KnowledgeGraphManager
+from src.core.deepseek_client import DeepSeekClient
+from src.knowledge_graph.graph_manager import KnowledgeGraphManager
 
 class ContentProcessor:
     def __init__(

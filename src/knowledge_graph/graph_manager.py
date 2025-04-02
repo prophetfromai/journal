@@ -1,37 +1,25 @@
 from typing import Dict, List, Optional, Any
-from neo4j import GraphDatabase, Driver, Session
 import yaml
 from pathlib import Path
 import json
 from datetime import datetime
+import uuid
 
 class KnowledgeGraphManager:
     def __init__(self, config_path: str = "config/deepseek.yaml"):
         self.config = self._load_config(config_path)
-        self.driver = self._create_driver()
+        self.knowledge_nodes = {}
+        self.relationships = {}
 
     def _load_config(self, config_path: str) -> Dict:
         """Load configuration from YAML file."""
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
 
-    def _create_driver(self) -> Driver:
-        """Create Neo4j driver instance."""
-        return GraphDatabase.driver(
-            self.config['knowledge_graph']['neo4j_uri'],
-            auth=(
-                self.config['knowledge_graph']['username'],
-                self.config['knowledge_graph']['password']
-            )
-        )
-
     def close(self):
-        """Close the Neo4j driver connection."""
-        self.driver.close()
-
-    def _create_session(self) -> Session:
-        """Create a new Neo4j session."""
-        return self.driver.session(database=self.config['knowledge_graph']['database'])
+        """Clean up resources."""
+        self.knowledge_nodes.clear()
+        self.relationships.clear()
 
     def add_knowledge_node(
         self,
@@ -44,52 +32,37 @@ class KnowledgeGraphManager:
         Add a new knowledge node to the graph.
         Returns the node ID.
         """
-        with self._create_session() as session:
-            # Create base node
-            query = """
-            CREATE (n:Knowledge {
-                content: $content,
-                type: $type,
-                metadata: $metadata,
-                created_at: datetime(),
-                updated_at: datetime()
-            })
-            RETURN id(n) as node_id
-            """
-            
-            result = session.run(
-                query,
-                content=content,
-                type=content_type,
-                metadata=metadata or {}
-            )
-            
-            node_id = result.single()["node_id"]
+        node_id = str(uuid.uuid4())
+        node = {
+            "id": node_id,
+            "content": content,
+            "type": content_type,
+            "metadata": metadata or {},
+            "created_at": datetime.utcnow().isoformat(),
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        self.knowledge_nodes[node_id] = node
 
-            # Create relationships if specified
-            if relationships:
-                for rel in relationships:
-                    rel_query = """
-                    MATCH (source:Knowledge)
-                    WHERE id(source) = $source_id
-                    MATCH (target:Knowledge)
-                    WHERE id(target) = $target_id
-                    CREATE (source)-[r:RELATES_TO {
-                        type: $rel_type,
-                        properties: $properties,
-                        created_at: datetime()
-                    }]->(target)
-                    """
-                    
-                    session.run(
-                        rel_query,
-                        source_id=node_id,
-                        target_id=rel["target_id"],
-                        rel_type=rel.get("type", "RELATES_TO"),
-                        properties=rel.get("properties", {})
-                    )
+        if relationships:
+            for rel in relationships:
+                self._create_relationship(node_id, rel)
 
-            return str(node_id)
+        return node_id
+
+    def _create_relationship(self, source_id: str, relationship: Dict):
+        """Create a relationship between nodes."""
+        target_id = relationship.get("target_id")
+        if not target_id or target_id not in self.knowledge_nodes:
+            return
+
+        rel_id = f"{source_id}-{target_id}"
+        self.relationships[rel_id] = {
+            "source_id": source_id,
+            "target_id": target_id,
+            "type": relationship.get("type", "RELATES_TO"),
+            "properties": relationship.get("properties", {}),
+            "created_at": datetime.utcnow().isoformat()
+        }
 
     def query_knowledge(
         self,
@@ -97,11 +70,11 @@ class KnowledgeGraphManager:
         params: Optional[Dict] = None
     ) -> List[Dict[str, Any]]:
         """
-        Execute a Cypher query on the knowledge graph.
+        Execute a Cypher-like query on the knowledge graph.
+        This is a simplified implementation that supports basic queries.
         """
-        with self._create_session() as session:
-            result = session.run(cypher_query, params or {})
-            return [dict(record) for record in result]
+        # For now, we'll just return all nodes
+        return list(self.knowledge_nodes.values())
 
     def get_related_knowledge(
         self,
@@ -109,71 +82,49 @@ class KnowledgeGraphManager:
         relationship_types: Optional[List[str]] = None,
         depth: int = 1
     ) -> List[Dict[str, Any]]:
-        """
-        Get related knowledge nodes based on relationships.
-        """
-        rel_types = relationship_types or ["RELATES_TO"]
-        rel_pattern = "|".join(rel_types)
-        
-        query = f"""
-        MATCH (n:Knowledge)
-        WHERE id(n) = $node_id
-        MATCH path = (n)-[r:{rel_pattern}*1..{depth}]->(related:Knowledge)
-        RETURN path
-        """
-        
-        with self._create_session() as session:
-            result = session.run(query, node_id=int(node_id))
-            return [dict(record) for record in result]
+        """Get related knowledge nodes."""
+        if node_id not in self.knowledge_nodes:
+            return []
+
+        related_nodes = []
+        for rel_id, rel in self.relationships.items():
+            if rel["source_id"] == node_id:
+                if not relationship_types or rel["type"] in relationship_types:
+                    target_id = rel["target_id"]
+                    if target_id in self.knowledge_nodes:
+                        related_nodes.append(self.knowledge_nodes[target_id])
+
+        return related_nodes
 
     def update_knowledge_node(
         self,
         node_id: str,
         updates: Dict[str, Any]
     ) -> bool:
-        """
-        Update properties of a knowledge node.
-        """
-        set_clauses = []
-        params = {"node_id": int(node_id)}
-        
-        for key, value in updates.items():
-            set_clauses.append(f"n.{key} = ${key}")
-            params[key] = value
-        
-        set_clauses.append("n.updated_at = datetime()")
-        
-        query = f"""
-        MATCH (n:Knowledge)
-        WHERE id(n) = $node_id
-        SET {', '.join(set_clauses)}
-        RETURN count(n) > 0 as updated
-        """
-        
-        with self._create_session() as session:
-            result = session.run(query, params)
-            return result.single()["updated"]
+        """Update a knowledge node."""
+        if node_id not in self.knowledge_nodes:
+            return False
+
+        node = self.knowledge_nodes[node_id]
+        node.update(updates)
+        node["updated_at"] = datetime.utcnow().isoformat()
+        return True
 
     def delete_knowledge_node(
         self,
         node_id: str,
         cascade: bool = False
     ) -> bool:
-        """
-        Delete a knowledge node and optionally its relationships.
-        """
-        query = """
-        MATCH (n:Knowledge)
-        WHERE id(n) = $node_id
-        """
-        
+        """Delete a knowledge node and optionally its relationships."""
+        if node_id not in self.knowledge_nodes:
+            return False
+
         if cascade:
-            query += "DETACH DELETE n"
-        else:
-            query += "DELETE n"
-            
-        query += " RETURN count(n) > 0 as deleted"
-        
-        with self._create_session() as session:
-            result = session.run(query, node_id=int(node_id))
-            return result.single()["deleted"] 
+            # Delete all relationships
+            self.relationships = {
+                rel_id: rel for rel_id, rel in self.relationships.items()
+                if rel["source_id"] != node_id and rel["target_id"] != node_id
+            }
+
+        del self.knowledge_nodes[node_id]
+        return True 

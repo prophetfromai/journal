@@ -4,7 +4,7 @@ from pathlib import Path
 
 def init_graph():
     """
-    Initialize the Neo4j knowledge graph with necessary indexes and constraints.
+    Initialize the knowledge graph with necessary structures.
     """
     # Load configuration
     config_path = Path("config/deepseek.yaml")
@@ -16,41 +16,25 @@ def init_graph():
     graph_manager = KnowledgeGraphManager()
 
     try:
-        # Create indexes
-        indexes = [
-            """
-            CREATE INDEX knowledge_type IF NOT EXISTS
-            FOR (n:Knowledge) ON (n.type)
-            """,
-            """
-            CREATE INDEX knowledge_created_at IF NOT EXISTS
-            FOR (n:Knowledge) ON (n.created_at)
-            """,
-            """
-            CREATE INDEX knowledge_updated_at IF NOT EXISTS
-            FOR (n:Knowledge) ON (n.updated_at)
-            """
+        # Add some initial knowledge nodes
+        initial_nodes = [
+            {
+                "content": "System initialized",
+                "content_type": "system",
+                "metadata": {"version": "1.0.0"}
+            },
+            {
+                "content": "LM Studio server running on port 1234",
+                "content_type": "system",
+                "metadata": {"component": "llm"}
+            }
         ]
 
-        # Create constraints
-        constraints = [
-            """
-            CREATE CONSTRAINT knowledge_id IF NOT EXISTS
-            FOR (n:Knowledge) REQUIRE n.id IS UNIQUE
-            """
-        ]
+        for node in initial_nodes:
+            graph_manager.add_knowledge_node(**node)
 
-        # Execute indexes
-        for index in indexes:
-            graph_manager.query_knowledge(index)
-            print(f"Created index: {index.split()[2]}")
-
-        # Execute constraints
-        for constraint in constraints:
-            graph_manager.query_knowledge(constraint)
-            print(f"Created constraint: {constraint.split()[2]}")
-
-        print("Knowledge graph initialization completed successfully!")
+        print("Knowledge graph initialized successfully")
+        print(f"Added {len(initial_nodes)} initial nodes")
 
     except Exception as e:
         print(f"Error initializing knowledge graph: {str(e)}")

@@ -4,6 +4,7 @@ from pathlib import Path
 import time
 from datetime import datetime
 import json
+import aiohttp
 
 class DeepSeekClient:
     def __init__(self, config_path: str = "config/deepseek.yaml"):
@@ -11,11 +12,23 @@ class DeepSeekClient:
         self._last_request_time = 0
         self._request_count = 0
         self._reset_time = datetime.now()
+        self._session = None
 
     def _load_config(self, config_path: str) -> Dict:
         """Load configuration from YAML file."""
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
+
+    async def _ensure_session(self):
+        """Ensure aiohttp session exists."""
+        if self._session is None:
+            self._session = aiohttp.ClientSession()
+
+    async def close(self):
+        """Close the aiohttp session."""
+        if self._session:
+            await self._session.close()
+            self._session = None
 
     def _check_rate_limits(self) -> None:
         """Check and enforce rate limits."""
@@ -57,14 +70,35 @@ class DeepSeekClient:
         top_p = top_p or self.config['model']['top_p']
 
         try:
-            # TODO: Implement actual DeepSeek API call here
-            # This is a placeholder for the actual implementation
-            response = "Placeholder response"
+            if self._session is None:
+                self._session = aiohttp.ClientSession()
+            
+            # Prepare request for LM Studio server
+            payload = {
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens,
+                "stream": False
+            }
+
+            # Make request to LM Studio server
+            async with self._session.post(
+                f"{self.config['model']['server_url']}/v1/chat/completions",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"API request failed with status {response.status}: {error_text}")
+                
+                result = await response.json()
+                generated_text = result["choices"][0]["message"]["content"]
             
             self._last_request_time = time.time()
             self._request_count += 1
             
-            return response
+            return generated_text
         except Exception as e:
             raise Exception(f"Error generating text: {str(e)}")
 

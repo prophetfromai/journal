@@ -1,0 +1,43 @@
+model:
+  name: "deepseek-coder"
+  version: "latest"
+  device: "cpu"  # Using CPU since we're running through LM Studio
+  max_length: 2048
+  temperature: 0.7
+  top_p: 0.95
+  server_url: "http://localhost:1234"  # LM Studio server URL
+
+rate_limiting:
+  max_requests_per_minute: 60
+  max_tokens_per_request: 4000
+  cooldown_period_seconds: 5
+
+knowledge_graph:
+  neo4j_uri: "bolt://localhost:7687"
+  username: "neo4j"
+  password: "your_password"
+  database: "neo4j"
+
+git:
+  base_repo_path: "./repos"
+  max_concurrent_operations: 3
+  commit_message_template: "AI: {description}"
+
+workflows:
+  max_concurrent_workflows: 5
+  timeout_seconds: 3600
+  retry_attempts: 3
+
+content_processing:
+  max_file_size_mb: 100
+  supported_formats:
+    - "pdf"
+    - "txt"
+    - "md"
+    - "youtube"
+  output_dir: "./data/processed"
+
+self_improvement:
+  knowledge_extraction_interval_hours: 24
+  max_knowledge_updates_per_day: 10
+  validation_threshold: 0.85 

@@ -10,6 +10,13 @@ Each work area follows the format: `AREA-XXX` where:
 
 Example: `FEAT-001`, `FIX-002`, `DOCS-003`
 
+## Branch Naming Convention
+Each feature branch follows the format: `feature/AREA-XXX-AGENT-ID` where:
+- AREA-XXX: The work area ID
+- AGENT-ID: Unique identifier for the AI agent
+
+Example: `feature/FEAT-001-AGENT-001`
+
 ## Work Area Categories
 1. FEAT: New features and enhancements
 2. FIX: Bug fixes and corrections
@@ -46,6 +53,62 @@ Example: `FEAT-001`, `FIX-002`, `DOCS-003`
 - REVIEW: Under review
 - FAILED: Failed to complete
 
+## Global Distribution System
+
+### Getting Started
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd <repository-name>
+   ```
+
+2. Initialize the coordination system:
+   ```bash
+   python src/tools/global_agent_example.py
+   ```
+
+3. Create a new AI agent:
+   ```python
+   from src.tools.global_agent_example import DistributedAIAgent
+   
+   agent = DistributedAIAgent(
+       agent_id="YOUR-AGENT-ID",
+       capabilities=["FEAT", "TEST", "DOCS"]
+   )
+   ```
+
+### Workflow
+1. **Start Work**
+   ```python
+   branch_name = agent.start_work()
+   if branch_name:
+       # Work on the branch
+       # Make changes
+       # Commit changes
+   ```
+
+2. **Complete Work**
+   ```python
+   agent.complete_work(branch_name)
+   ```
+
+3. **Check Status**
+   ```python
+   status = agent.check_work_status("FEAT-001")
+   ```
+
+### Branch Management
+- Branches are automatically created with the correct naming convention
+- Branch existence indicates work area is locked
+- Branches are automatically deleted when work is completed
+- Branch names include both work area and agent ID for tracking
+
+### Synchronization
+- The coordination file is automatically synced with branch state
+- Remote branches are checked for work area conflicts
+- Dependencies are verified before work can begin
+- Status updates are reflected in both branches and coordination file
+
 ## AI Agent Workflow
 
 1. **Select Work Area**
@@ -57,9 +120,9 @@ Example: `FEAT-001`, `FIX-002`, `DOCS-003`
 
 2. **Create Branch**
    ```bash
-   git checkout -b feature/AREA-XXX
+   git checkout -b feature/AREA-XXX-AGENT-ID
    ```
-   Example: `git checkout -b feature/FEAT-003`
+   Example: `git checkout -b feature/FEAT-003-AGENT-001`
 
 3. **Update Status**
    - Change the area status to "IN_PROGRESS"

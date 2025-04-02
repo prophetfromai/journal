@@ -17,7 +17,8 @@ class LMStudioClient:
     def __init__(self, base_url: str = "http://localhost:1234", 
                  max_requests_per_minute: int = 60,
                  max_tokens_per_request: int = 4000,
-                 cooldown_period: float = 5.0):
+                 cooldown_period: float = 5.0,
+                 model: str = "deepseek-r1-distill-qwen-7b"):
         """Initialize the LM Studio client.
         
         Args:
@@ -25,11 +26,13 @@ class LMStudioClient:
             max_requests_per_minute: Maximum number of requests per minute
             max_tokens_per_request: Maximum tokens per request
             cooldown_period: Cooldown period between requests in seconds
+            model: Name of the model to use
         """
         self.base_url = base_url
         self.max_requests_per_minute = max_requests_per_minute
         self.max_tokens_per_request = max_tokens_per_request
         self.cooldown_period = cooldown_period
+        self.model = model
         self.last_request_time = 0
         self.request_count = 0
         self.request_window_start = datetime.now()
@@ -108,15 +111,16 @@ class LMStudioClient:
             max_tokens = self.max_tokens_per_request
             
         data = {
-            "prompt": prompt,
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
             "temperature": temperature,
             "top_p": top_p,
             "stream": False
         }
         
-        response = self._make_request("v1/completions", data=data)
-        return response["choices"][0]["text"]
+        response = self._make_request("v1/chat/completions", data=data)
+        return response["choices"][0]["message"]["content"]
         
     def analyze_code(self, code: str, analysis_type: str = "review") -> Dict[str, Any]:
         """Analyze code using the model.
@@ -134,7 +138,7 @@ class LMStudioClient:
         try:
             return json.loads(response)
         except json.JSONDecodeError:
-            return {"error": "Failed to parse analysis response"}
+            return {"error": "Failed to parse analysis response", "raw_response": response}
             
     def extract_knowledge(self, content: str, content_type: str) -> Dict[str, Any]:
         """Extract structured knowledge from content.
@@ -152,7 +156,7 @@ class LMStudioClient:
         try:
             return json.loads(response)
         except json.JSONDecodeError:
-            return {"error": "Failed to parse knowledge extraction response"}
+            return {"error": "Failed to parse knowledge extraction response", "raw_response": response}
             
     def generate_workflow(self, task_description: str) -> Dict[str, Any]:
         """Generate a workflow from a task description.
@@ -169,7 +173,7 @@ class LMStudioClient:
         try:
             return json.loads(response)
         except json.JSONDecodeError:
-            return {"error": "Failed to parse workflow response"}
+            return {"error": "Failed to parse workflow response", "raw_response": response}
             
     def validate_code(self, code: str, requirements: List[str]) -> Dict[str, Any]:
         """Validate code against requirements.
@@ -190,7 +194,7 @@ class LMStudioClient:
         try:
             return json.loads(response)
         except json.JSONDecodeError:
-            return {"error": "Failed to parse validation response"}
+            return {"error": "Failed to parse validation response", "raw_response": response}
             
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about the loaded model.

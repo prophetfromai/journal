@@ -40,7 +40,8 @@ def main():
             base_url=config["api"]["base_url"],
             max_requests_per_minute=config["api"]["max_requests_per_minute"],
             max_tokens_per_request=config["api"]["max_tokens_per_request"],
-            cooldown_period=config["api"]["cooldown_period"]
+            cooldown_period=config["api"]["cooldown_period"],
+            model=config["api"]["model"]
         )
         
         # Check if LM Studio is running

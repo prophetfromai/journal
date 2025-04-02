@@ -61,19 +61,23 @@ class WorkflowManager:
         Execute a workflow by ID.
         """
         # Get workflow from knowledge graph
-        workflow_data = self.graph_manager.query_knowledge(
-            """
-            MATCH (n:Knowledge)
-            WHERE id(n) = $workflow_id
-            RETURN n.content as workflow
-            """,
-            {"workflow_id": int(workflow_id)}
-        )
-        
-        if not workflow_data:
+        if workflow_id not in self.graph_manager.knowledge_nodes:
             raise ValueError(f"Workflow {workflow_id} not found")
             
-        workflow = json.loads(workflow_data[0]["workflow"])
+        workflow_node = self.graph_manager.knowledge_nodes[workflow_id]
+        workflow_content = workflow_node["content"]
+        
+        # Create a simple workflow structure
+        workflow = {
+            "steps": [
+                {
+                    "type": "code_generation",
+                    "id": "step1",
+                    "prompt": workflow_content,
+                    "parameters": parameters or {}
+                }
+            ]
+        }
         
         # Create execution task
         task = asyncio.create_task(

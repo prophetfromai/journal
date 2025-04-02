@@ -1,11 +1,13 @@
 import asyncio
 import uvicorn
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Dict, List, Optional, Any
+from fastapi import FastAPI, HTTPException, Path as FastAPIPath, Request
+from pydantic import BaseModel, UUID4, constr
+from typing import Dict, List, Optional, Any, Annotated
 from pathlib import Path
 import sys
 import os
+import re
+from uuid import UUID
 
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,6 +34,13 @@ class WorkflowRequest(BaseModel):
     task_description: str
     constraints: Optional[List[str]] = None
     parameters: Optional[Dict] = None
+
+def validate_uuid(value: str) -> str:
+    """Validate that a string is a valid UUID."""
+    uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    if not uuid_pattern.match(value):
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+    return value
 
 @app.post("/process-content")
 async def process_content(request: ContentRequest):
@@ -63,18 +72,43 @@ async def generate_workflow(request: WorkflowRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/execute-workflow/{workflow_id}")
-async def execute_workflow(workflow_id: str, request: WorkflowRequest):
+async def execute_workflow(
+    workflow_request: WorkflowRequest,
+    workflow_id: UUID = FastAPIPath(..., description="The ID of the workflow to execute")
+):
     """
     Execute a workflow by ID.
     """
     try:
-        result = await workflow_manager.execute_workflow(
-            workflow_id,
-            request.parameters
-        )
-        return result
+        # Convert UUID to string
+        workflow_id_str = str(workflow_id)
+        
+        # Check if workflow exists
+        if workflow_id_str not in graph_manager.knowledge_nodes:
+            raise HTTPException(status_code=404, detail=f"Workflow {workflow_id_str} not found")
+
+        try:
+            result = await workflow_manager.execute_workflow(
+                workflow_id_str,
+                workflow_request.parameters
+            )
+            return result
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except Exception as e:
+            import traceback
+            error_details = {
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+            raise HTTPException(status_code=500, detail=error_details)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_details = {
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+        raise HTTPException(status_code=500, detail=error_details)
 
 @app.get("/active-workflows")
 async def get_active_workflows():

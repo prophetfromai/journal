@@ -109,7 +109,7 @@ class UserAchievementDB(Base):
     user_id = Column(String, ForeignKey("users.id"), primary_key=True)
     achievement_id = Column(String, ForeignKey("achievements.id"), primary_key=True)
     earned_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    metadata = Column(String, nullable=True)  # JSON string
+    achievement_metadata = Column(String, nullable=True)  # JSON string
 
 # Database connection
 SQLALCHEMY_DATABASE_URL = "sqlite:///./community.db"
@@ -125,4 +125,8 @@ def get_db():
 
 # Initialize database
 def init_db():
-    Base.metadata.create_all(bind=engine) 
+    Base.metadata.create_all(bind=engine)
+
+if __name__ == "__main__":
+    init_db()
+    print("Database initialized successfully!") 

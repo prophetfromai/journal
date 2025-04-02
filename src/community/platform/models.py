@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr, UUID4
-from typing import List, Optional, Dict
+from pydantic import BaseModel, EmailStr, UUID4, ConfigDict
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
 
@@ -69,10 +69,12 @@ class Discussion(BaseModel):
     updated_at: datetime
 
 class Achievement(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     id: UUID4
     title: str
     description: str
-    criteria: Dict[str, any]
+    criteria: Dict[str, Any]
     badge_url: str
     created_at: datetime
 
@@ -80,4 +82,4 @@ class UserAchievement(BaseModel):
     user_id: UUID4
     achievement_id: UUID4
     earned_at: datetime
-    metadata: Optional[Dict] = None 
+    achievement_metadata: Optional[Dict[str, Any]] = None 

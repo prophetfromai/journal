@@ -106,10 +106,10 @@ async def test_knowledge_graph_operations(graph_manager):
     result = graph_manager.query_knowledge(
         """
         MATCH (n:Knowledge)
-        WHERE id(n) = $node_id
+        WHERE n.id = $node_id
         RETURN n.content as content, n.type as type, n.metadata as metadata
         """,
-        {"node_id": int(node_id)}
+        {"node_id": node_id}
     )
     
     assert len(result) == 1
@@ -129,10 +129,10 @@ async def test_knowledge_graph_operations(graph_manager):
     result = graph_manager.query_knowledge(
         """
         MATCH (n:Knowledge)
-        WHERE id(n) = $node_id
+        WHERE n.id = $node_id
         RETURN n.content as content
         """,
-        {"node_id": int(node_id)}
+        {"node_id": node_id}
     )
     
     assert result[0]["content"] == "Updated content"

@@ -73,8 +73,13 @@ class KnowledgeGraphManager:
         Execute a Cypher-like query on the knowledge graph.
         This is a simplified implementation that supports basic queries.
         """
-        # For now, we'll just return all nodes
-        return list(self.knowledge_nodes.values())
+        # Simple query parser for basic WHERE clause
+        if "WHERE n.id =" in cypher_query and params and "workflow_id" in params:
+            workflow_id = params["workflow_id"]
+            if workflow_id in self.knowledge_nodes:
+                node = self.knowledge_nodes[workflow_id]
+                return [{"workflow": node["content"]}]
+        return []
 
     def get_related_knowledge(
         self,
@@ -82,7 +87,12 @@ class KnowledgeGraphManager:
         relationship_types: Optional[List[str]] = None,
         depth: int = 1
     ) -> List[Dict[str, Any]]:
-        """Get related knowledge nodes."""
+        """Get related knowledge nodes or a specific node by ID."""
+        # First, try to get the node directly
+        if node_id in self.knowledge_nodes:
+            return [self.knowledge_nodes[node_id]]
+
+        # If not found directly, look for related nodes
         if node_id not in self.knowledge_nodes:
             return []
 

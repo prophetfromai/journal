@@ -56,4 +56,12 @@ htmlcov/
 # Temporary files
 *.tmp
 *.temp
-.cache/ 
+.cache/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log 

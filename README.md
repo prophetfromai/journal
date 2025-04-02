@@ -26,10 +26,16 @@ That's it! The AI will use itself to write and improve the codebase. You can use
 
 If you want to run the system directly (without Cursor AI):
 
-1. Set up Python environment:
+1. **IMPORTANT: Set up Python Virtual Environment**
    ```bash
+   # Create and activate a virtual environment (REQUIRED)
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
+   
+   # Verify you're in the virtual environment
+   which python  # Should show path to venv/bin/python
+   
+   # Install dependencies in the virtual environment
    pip install -r requirements.txt
    ```
 
@@ -43,6 +49,8 @@ If you want to run the system directly (without Cursor AI):
    ```bash
    python src/knowledge_graph/init_graph.py
    ```
+
+> **Note:** Always use a virtual environment to prevent conflicts with system Python packages. Never install dependencies globally.
 
 ## Core Features
 
